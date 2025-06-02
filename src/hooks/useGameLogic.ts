@@ -9,7 +9,9 @@ export const useGameLogic = (initialGridSize: number = 6) => {
     generateLevel(initialGridSize)
   );
   const [lastTapTime, setLastTapTime] = useState<{[key: string]: number}>({});
+  const [hintsUsed, setHintsUsed] = useState<number>(0);
   const DOUBLE_TAP_DELAY = 300; // ms
+  const MAX_HINTS = 3; // Limite d'indices par puzzle
 
   const updateRegions = useCallback((board: GameState['board'], regions: ColoredRegion[]) => {
     return regions.map(region => {
@@ -103,6 +105,55 @@ export const useGameLogic = (initialGridSize: number = 6) => {
     });
   }, [lastTapTime, updateRegions]);
 
+  const handleHint = useCallback(() => {
+    if (hintsUsed >= MAX_HINTS || !gameState.solution || gameState.isCompleted) {
+      return;
+    }
+
+    setGameState(prevState => {
+      // Trouver une position de la solution qui n'a pas encore de reine
+      const availableHints = prevState.solution?.filter(solutionPos => {
+        const cell = prevState.board[solutionPos.row][solutionPos.col];
+        return cell.state !== 'queen';
+      }) || [];
+
+      if (availableHints.length === 0) {
+        return prevState; // Pas d'indice disponible
+      }
+
+      // Choisir un indice aléatoire parmi les disponibles
+      const hintIndex = Math.floor(Math.random() * availableHints.length);
+      const hintPos = availableHints[hintIndex];
+
+      // Mettre en évidence la cellule pendant 3 secondes
+      const newBoard = prevState.board.map(row => 
+        row.map(cell => ({
+          ...cell,
+          isHighlighted: cell.row === hintPos.row && cell.col === hintPos.col
+        }))
+      );
+
+      // Retirer le highlight après 3 secondes
+      setTimeout(() => {
+        setGameState(currentState => ({
+          ...currentState,
+          board: currentState.board.map(row => 
+            row.map(cell => ({ ...cell, isHighlighted: false }))
+          )
+        }));
+      }, 3000);
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      return {
+        ...prevState,
+        board: newBoard
+      };
+    });
+
+    setHintsUsed(prev => prev + 1);
+  }, [gameState.solution, gameState.isCompleted, hintsUsed]);
+
   const resetGame = useCallback(() => {
     setGameState(prevState => {
       const resetBoard = prevState.board.map(row => 
@@ -131,20 +182,29 @@ export const useGameLogic = (initialGridSize: number = 6) => {
     });
     
     setLastTapTime({});
+    setHintsUsed(0); // Reset hints counter
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
   const newGame = useCallback((gridSize?: number) => {
+    console.log(`🎯 Generating new game with size ${gridSize || gameState.gridSize}`);
     const newGameState = generateLevel(gridSize || gameState.gridSize);
     setGameState(newGameState);
     setLastTapTime({});
+    setHintsUsed(0); // Reset hints for new game
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [gameState.gridSize]);
+
+  const hasHintAvailable = hintsUsed < MAX_HINTS && gameState.solution && !gameState.isCompleted;
 
   return {
     gameState,
     handleCellPress,
+    handleHint,
     resetGame,
-    newGame
+    newGame,
+    hasHintAvailable,
+    hintsUsed,
+    maxHints: MAX_HINTS
   };
 };
