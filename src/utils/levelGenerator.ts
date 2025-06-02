@@ -7,45 +7,29 @@ import { Colors } from '../constants/Colors';
  */
 export function generateColoredRegions(gridSize: number): ColoredRegion[] {
   const regions: ColoredRegion[] = [];
-  const usedCells = new Set<string>();
   
-  // Pour le POC, on crée des régions de formes simples
-  let regionId = 0;
+  console.log(`🎲 Generating regions for ${gridSize}x${gridSize} grid`);
   
-  // Stratégie simple : créer des régions en forme de blocs
-  const regionSize = Math.floor((gridSize * gridSize) / gridSize);
-  
-  for (let startRow = 0; startRow < gridSize; startRow++) {
-    for (let startCol = 0; startCol < gridSize; startCol++) {
-      const cellKey = `${startRow}-${startCol}`;
-      
-      if (!usedCells.has(cellKey) && regionId < gridSize) {
-        const region: ColoredRegion = {
-          id: regionId,
-          color: Colors.regions[regionId % Colors.regions.length],
-          cells: [],
-          hasQueen: false
-        };
-        
-        // Pour le POC, chaque région est une rangée horizontale
-        for (let col = 0; col < gridSize; col++) {
-          const cellKey = `${startRow}-${col}`;
-          if (!usedCells.has(cellKey)) {
-            region.cells.push({ row: startRow, col });
-            usedCells.add(cellKey);
-          }
-        }
-        
-        if (region.cells.length > 0) {
-          regions.push(region);
-          regionId++;
-        }
-        
-        break; // Passer à la rangée suivante
-      }
+  // Pour le POC, chaque région est une rangée horizontale
+  // Cela garantit exactement gridSize régions pour une grille gridSize×gridSize
+  for (let row = 0; row < gridSize; row++) {
+    const region: ColoredRegion = {
+      id: row,
+      color: Colors.regions[row % Colors.regions.length],
+      cells: [],
+      hasQueen: false
+    };
+    
+    // Ajouter toutes les cellules de cette rangée à la région
+    for (let col = 0; col < gridSize; col++) {
+      region.cells.push({ row, col });
     }
+    
+    regions.push(region);
+    console.log(`✅ Created region ${row} with ${region.cells.length} cells`);
   }
   
+  console.log(`🏁 Generated ${regions.length} regions total`);
   return regions;
 }
 
@@ -75,7 +59,7 @@ export function initializeBoard(gridSize: number, regions: ColoredRegion[]): Gam
     });
   });
   
-  // Initialiser le plateau
+  // Initialiser le plateau - EXACTEMENT gridSize × gridSize
   for (let row = 0; row < gridSize; row++) {
     board[row] = [];
     for (let col = 0; col < gridSize; col++) {
@@ -93,6 +77,12 @@ export function initializeBoard(gridSize: number, regions: ColoredRegion[]): Gam
     }
   }
   
+  // Vérification de sécurité
+  console.log(`🔍 Board created: ${board.length} rows × ${board[0]?.length} cols`);
+  if (board.length !== gridSize || board[0]?.length !== gridSize) {
+    console.error(`❌ ERREUR: Board size incorrect! Expected ${gridSize}×${gridSize}, got ${board.length}×${board[0]?.length}`);
+  }
+  
   return board;
 }
 
@@ -100,15 +90,31 @@ export function initializeBoard(gridSize: number, regions: ColoredRegion[]): Gam
  * Génère un niveau complet avec solution
  */
 export function generateLevel(gridSize: number) {
+  console.log(`🎯 Generating level for ${gridSize}×${gridSize} grid`);
+  
   const regions = generateColoredRegions(gridSize);
   const board = initializeBoard(gridSize, regions);
+  
+  // Vérifications finales
+  const totalCells = board.flat().length;
+  const expectedCells = gridSize * gridSize;
+  
+  console.log(`📊 Level stats: ${regions.length} regions, ${totalCells} cells (expected: ${expectedCells})`);
+  
+  if (totalCells !== expectedCells) {
+    console.error(`❌ ERREUR: Nombre de cellules incorrect!`);
+  }
+  
+  if (regions.length !== gridSize) {
+    console.error(`❌ ERREUR: Nombre de régions incorrect! Expected ${gridSize}, got ${regions.length}`);
+  }
   
   return {
     board,
     regions,
     gridSize,
     queensPlaced: 0,
-    queensRequired: gridSize,
+    queensRequired: gridSize, // Exactement gridSize reines nécessaires
     isCompleted: false,
     moveCount: 0
   };
