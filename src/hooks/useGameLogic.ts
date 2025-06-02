@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { GameState, ColoredRegion } from '../types/game';
 import { generateLevel } from '../utils/levelGenerator';
 import { validateQueenPlacement, isPuzzleCompleted, updateConflicts } from '../utils/gameValidation';
+import * as Haptics from 'expo-haptics';
 
 export const useGameLogic = (initialGridSize: number = 6) => {
   const [gameState, setGameState] = useState<GameState>(() => 
@@ -41,15 +42,16 @@ export const useGameLogic = (initialGridSize: number = 6) => {
         // Double tap: placer/retirer une reine
         if (currentCell.state === 'queen') {
           newState = 'empty';
-          // TODO: Add haptics when expo-haptics is available
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } else {
           // Vérifier si on peut placer une reine
           const validation = validateQueenPlacement(prevState.board, prevState.regions, row, col);
           if (validation.isValid) {
             newState = 'queen';
-            // TODO: Add haptics when expo-haptics is available
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           } else {
-            // Placement invalide
+            // Placement invalide, vibration d'erreur
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             return prevState; // Pas de changement
           }
         }
@@ -64,6 +66,7 @@ export const useGameLogic = (initialGridSize: number = 6) => {
         if (currentCell.state === 'queen') {
           return prevState;
         }
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
 
       // Mettre à jour la cellule
@@ -84,6 +87,10 @@ export const useGameLogic = (initialGridSize: number = 6) => {
       
       // Vérifier si le puzzle est complété
       const isCompleted = isPuzzleCompleted(newBoard, updatedRegions);
+      
+      if (isCompleted) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
 
       return {
         ...prevState,
@@ -124,12 +131,14 @@ export const useGameLogic = (initialGridSize: number = 6) => {
     });
     
     setLastTapTime({});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
   const newGame = useCallback((gridSize?: number) => {
     const newGameState = generateLevel(gridSize || gameState.gridSize);
     setGameState(newGameState);
     setLastTapTime({});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [gameState.gridSize]);
 
   return {
