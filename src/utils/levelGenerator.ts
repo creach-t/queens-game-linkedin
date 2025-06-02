@@ -2,8 +2,8 @@ import { ColoredRegion, GameCell } from '../types/game';
 import { Colors } from '../constants/Colors';
 
 /**
- * Générateur de puzzles Queens avec backtracking
- * Crée des régions variées et trouve automatiquement une solution
+ * Générateur de puzzles Queens avec régions CONNEXES
+ * Crée des régions où chaque cellule est adjacente orthogonalement à au moins une autre
  */
 
 interface Position {
@@ -12,213 +12,270 @@ interface Position {
 }
 
 /**
- * Génère des régions de formes variées et intéressantes
+ * Vérifie si deux positions sont adjacentes orthogonalement (pas diagonale)
  */
-export function generateAdvancedRegions(gridSize: number): ColoredRegion[] {
-  console.log(`🎲 Generating advanced regions for ${gridSize}×${gridSize} grid`);
+function areOrthogonallyAdjacent(pos1: Position, pos2: Position): boolean {
+  const rowDiff = Math.abs(pos1.row - pos2.row);
+  const colDiff = Math.abs(pos1.col - pos2.col);
+  return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+}
+
+/**
+ * Vérifie si une région est connexe
+ */
+function isRegionConnected(cells: Position[]): boolean {
+  if (cells.length <= 1) return true;
   
-  const regions: ColoredRegion[] = [];
-  const usedCells = new Set<string>();
-  const targetCellsPerRegion = gridSize; // Chaque région doit avoir exactement gridSize cellules
+  const visited = new Set<string>();
+  const queue = [cells[0]];
+  visited.add(`${cells[0].row}-${cells[0].col}`);
   
-  // Formes de régions possibles
-  const regionShapes = [
-    'L_SHAPE',
-    'RECTANGLE', 
-    'DIAGONAL',
-    'SPIRAL',
-    'CROSS',
-    'ZIGZAG'
-  ];
-  
-  for (let regionId = 0; regionId < gridSize; regionId++) {
-    const region: ColoredRegion = {
-      id: regionId,
-      color: Colors.regions[regionId % Colors.regions.length],
-      cells: [],
-      hasQueen: false
-    };
+  while (queue.length > 0) {
+    const current = queue.shift()!;
     
-    // Choisir une forme aléatoire pour cette région
-    const shapeType = regionShapes[Math.floor(Math.random() * regionShapes.length)];
-    const cells = generateRegionShape(gridSize, targetCellsPerRegion, usedCells, shapeType);
-    
-    region.cells = cells;
-    cells.forEach(cell => usedCells.add(`${cell.row}-${cell.col}`));
-    
-    regions.push(region);
-    console.log(`✅ Created region ${regionId} (${shapeType}) with ${cells.length} cells`);
+    // Chercher tous les voisins orthogonaux dans la région
+    for (const cell of cells) {
+      const key = `${cell.row}-${cell.col}`;
+      if (!visited.has(key) && areOrthogonallyAdjacent(current, cell)) {
+        visited.add(key);
+        queue.push(cell);
+      }
+    }
   }
   
-  // Si certaines cellules ne sont pas assignées, les ajouter à la dernière région
-  const totalAssigned = regions.reduce((sum, region) => sum + region.cells.length, 0);
-  const totalCells = gridSize * gridSize;
+  return visited.size === cells.length;
+}
+
+/**
+ * Génère une région connexe à partir d'une position de départ
+ */
+function generateConnectedRegion(
+  startRow: number,
+  startCol: number,
+  targetSize: number,
+  gridSize: number,
+  usedCells: Set<string>
+): Position[] {
+  const region: Position[] = [];
+  const queue: Position[] = [{ row: startRow, col: startCol }];
+  const regionSet = new Set<string>();
   
-  if (totalAssigned < totalCells) {
-    console.log(`🔧 Assigning remaining ${totalCells - totalAssigned} cells...`);
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        const cellKey = `${row}-${col}`;
-        if (!usedCells.has(cellKey)) {
-          regions[regions.length - 1].cells.push({ row, col });
+  // Directions orthogonales : haut, bas, gauche, droite
+  const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  
+  while (queue.length > 0 && region.length < targetSize) {
+    // Choisir aléatoirement dans la queue pour plus de variété
+    const randomIndex = Math.floor(Math.random() * queue.length);
+    const current = queue.splice(randomIndex, 1)[0];
+    
+    const key = `${current.row}-${current.col}`;
+    
+    if (usedCells.has(key) || regionSet.has(key)) {
+      continue;
+    }
+    
+    // Ajouter la cellule à la région
+    region.push(current);
+    regionSet.add(key);
+    
+    // Ajouter les voisins valides à la queue
+    for (const [dr, dc] of directions) {
+      const newRow = current.row + dr;
+      const newCol = current.col + dc;
+      const newKey = `${newRow}-${newCol}`;
+      
+      if (
+        newRow >= 0 && newRow < gridSize &&
+        newCol >= 0 && newCol < gridSize &&
+        !usedCells.has(newKey) &&
+        !regionSet.has(newKey)
+      ) {
+        // Éviter d'ajouter si déjà dans la queue
+        const alreadyInQueue = queue.some(pos => pos.row === newRow && pos.col === newCol);
+        if (!alreadyInQueue) {
+          queue.push({ row: newRow, col: newCol });
         }
       }
     }
   }
   
-  console.log(`🏁 Generated ${regions.length} regions with varied shapes`);
+  return region;
+}
+
+/**
+ * Génère des régions connexes avec limitation des lignes complètes
+ */
+export function generateConnectedRegions(gridSize: number): ColoredRegion[] {
+  console.log(`🎲 Generating connected regions for ${gridSize}×${gridSize} grid`);
+  
+  const regions: ColoredRegion[] = [];
+  const usedCells = new Set<string>();
+  const targetCellsPerRegion = gridSize;
+  let fullLinesUsed = 0;
+  const maxFullLines = 1; // Limiter à 1 ligne complète maximum
+  
+  for (let regionId = 0; regionId < gridSize; regionId++) {
+    let regionCells: Position[] = [];
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    while (regionCells.length === 0 && attempts < maxAttempts) {
+      attempts++;
+      
+      // Choisir une stratégie
+      const useFullLine = fullLinesUsed < maxFullLines && Math.random() < 0.3; // 30% chance pour ligne complète
+      
+      if (useFullLine) {
+        // Essayer de créer une ligne complète (horizontale ou verticale)
+        const isHorizontal = Math.random() < 0.5;
+        
+        if (isHorizontal) {
+          // Ligne horizontale
+          for (let row = 0; row < gridSize; row++) {
+            const lineCells: Position[] = [];
+            let lineAvailable = true;
+            
+            for (let col = 0; col < gridSize; col++) {
+              const key = `${row}-${col}`;
+              if (usedCells.has(key)) {
+                lineAvailable = false;
+                break;
+              }
+              lineCells.push({ row, col });
+            }
+            
+            if (lineAvailable) {
+              regionCells = lineCells;
+              fullLinesUsed++;
+              console.log(`✅ Created horizontal line region ${regionId}`);
+              break;
+            }
+          }
+        } else {
+          // Ligne verticale
+          for (let col = 0; col < gridSize; col++) {
+            const lineCells: Position[] = [];
+            let lineAvailable = true;
+            
+            for (let row = 0; row < gridSize; row++) {
+              const key = `${row}-${col}`;
+              if (usedCells.has(key)) {
+                lineAvailable = false;
+                break;
+              }
+              lineCells.push({ row, col });
+            }
+            
+            if (lineAvailable) {
+              regionCells = lineCells;
+              fullLinesUsed++;
+              console.log(`✅ Created vertical line region ${regionId}`);
+              break;
+            }
+          }
+        }
+      }
+      
+      // Si pas de ligne complète ou échec, créer une région connexe
+      if (regionCells.length === 0) {
+        // Trouver une cellule libre pour commencer
+        let startRow = Math.floor(Math.random() * gridSize);
+        let startCol = Math.floor(Math.random() * gridSize);
+        
+        // Chercher une cellule libre
+        let foundStart = false;
+        for (let attempts = 0; attempts < gridSize * gridSize; attempts++) {
+          const key = `${startRow}-${startCol}`;
+          if (!usedCells.has(key)) {
+            foundStart = true;
+            break;
+          }
+          startCol++;
+          if (startCol >= gridSize) {
+            startCol = 0;
+            startRow++;
+            if (startRow >= gridSize) {
+              startRow = 0;
+            }
+          }
+        }
+        
+        if (foundStart) {
+          regionCells = generateConnectedRegion(startRow, startCol, targetCellsPerRegion, gridSize, usedCells);
+          
+          // Vérifier que la région est bien connexe
+          if (regionCells.length > 0 && isRegionConnected(regionCells)) {
+            console.log(`✅ Created connected region ${regionId} with ${regionCells.length} cells`);
+          } else if (regionCells.length > 0) {
+            console.log(`⚠️ Region ${regionId} not connected, retrying...`);
+            regionCells = []; // Retry
+          }
+        }
+      }
+    }
+    
+    // Si on n'arrive pas à créer une région, remplir avec les cellules restantes
+    if (regionCells.length === 0) {
+      console.log(`🔧 Filling remaining cells for region ${regionId}`);
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          const key = `${row}-${col}`;
+          if (!usedCells.has(key) && regionCells.length < targetCellsPerRegion) {
+            regionCells.push({ row, col });
+          }
+        }
+      }
+    }
+    
+    if (regionCells.length > 0) {
+      const region: ColoredRegion = {
+        id: regionId,
+        color: Colors.regions[regionId % Colors.regions.length],
+        cells: regionCells,
+        hasQueen: false
+      };
+      
+      regions.push(region);
+      regionCells.forEach(cell => usedCells.add(`${cell.row}-${cell.col}`));
+    }
+  }
+  
+  console.log(`🏁 Generated ${regions.length} connected regions (${fullLinesUsed} full lines)`);
   return regions;
 }
 
 /**
- * Génère une forme de région spécifique
+ * Génère des régions colorées simples (fallback)
  */
-function generateRegionShape(
-  gridSize: number, 
-  targetSize: number, 
-  usedCells: Set<string>, 
-  shapeType: string
-): Position[] {
-  const cells: Position[] = [];
-  let attempts = 0;
-  const maxAttempts = 100;
+export function generateColoredRegions(gridSize: number): ColoredRegion[] {
+  console.log(`🎯 Generating fallback regions for ${gridSize}×${gridSize} grid`);
   
-  while (cells.length < targetSize && attempts < maxAttempts) {
-    attempts++;
+  const regions: ColoredRegion[] = [];
+  
+  // Chaque région est une rangée horizontale (solution simple qui marche toujours)
+  for (let row = 0; row < gridSize; row++) {
+    const region: ColoredRegion = {
+      id: row,
+      color: Colors.regions[row % Colors.regions.length],
+      cells: [],
+      hasQueen: false
+    };
     
-    // Trouver une position de départ libre
-    const startRow = Math.floor(Math.random() * gridSize);
-    const startCol = Math.floor(Math.random() * gridSize);
-    const startKey = `${startRow}-${startCol}`;
-    
-    if (usedCells.has(startKey)) continue;
-    
-    const shapeCells = generateShapeCells(startRow, startCol, gridSize, targetSize, shapeType, usedCells);
-    
-    if (shapeCells.length >= Math.min(targetSize, gridSize)) {
-      return shapeCells.slice(0, targetSize);
+    for (let col = 0; col < gridSize; col++) {
+      region.cells.push({ row, col });
     }
+    
+    regions.push(region);
   }
   
-  // Fallback: générer une forme simple si la forme complexe échoue
-  return generateSimpleFallback(gridSize, targetSize, usedCells);
+  return regions;
 }
 
 /**
- * Génère les cellules pour une forme spécifique
+ * Génère des régions avancées (utilise maintenant les régions connexes)
  */
-function generateShapeCells(
-  startRow: number, 
-  startCol: number, 
-  gridSize: number, 
-  maxSize: number, 
-  shapeType: string,
-  usedCells: Set<string>
-): Position[] {
-  const cells: Position[] = [];
-  const visited = new Set<string>();
-  
-  switch (shapeType) {
-    case 'L_SHAPE':
-      // Forme en L
-      for (let i = 0; i < Math.min(maxSize, 4); i++) {
-        addCellIfValid(cells, startRow, startCol + i, gridSize, usedCells, visited);
-      }
-      for (let i = 1; i < Math.min(maxSize - cells.length, 3); i++) {
-        addCellIfValid(cells, startRow + i, startCol, gridSize, usedCells, visited);
-      }
-      break;
-      
-    case 'RECTANGLE':
-      // Rectangle compact
-      const width = Math.min(3, Math.ceil(Math.sqrt(maxSize)));
-      const height = Math.ceil(maxSize / width);
-      for (let r = 0; r < height && cells.length < maxSize; r++) {
-        for (let c = 0; c < width && cells.length < maxSize; c++) {
-          addCellIfValid(cells, startRow + r, startCol + c, gridSize, usedCells, visited);
-        }
-      }
-      break;
-      
-    case 'DIAGONAL':
-      // Ligne diagonale
-      for (let i = 0; i < maxSize; i++) {
-        addCellIfValid(cells, startRow + i, startCol + i, gridSize, usedCells, visited);
-        if (cells.length >= maxSize) break;
-        addCellIfValid(cells, startRow + i, startCol - i, gridSize, usedCells, visited);
-      }
-      break;
-      
-    case 'SPIRAL':
-      // Spirale
-      let dir = 0; // 0=right, 1=down, 2=left, 3=up
-      let r = startRow, c = startCol;
-      const directions = [[0,1], [1,0], [0,-1], [-1,0]];
-      
-      for (let i = 0; i < maxSize; i++) {
-        addCellIfValid(cells, r, c, gridSize, usedCells, visited);
-        
-        const [dr, dc] = directions[dir];
-        const nextR = r + dr;
-        const nextC = c + dc;
-        
-        if (nextR < 0 || nextR >= gridSize || nextC < 0 || nextC >= gridSize || 
-            visited.has(`${nextR}-${nextC}`)) {
-          dir = (dir + 1) % 4;
-        }
-        
-        const [newDr, newDc] = directions[dir];
-        r += newDr;
-        c += newDc;
-      }
-      break;
-      
-    default:
-      // Forme simple par défaut
-      return generateSimpleFallback(gridSize, maxSize, usedCells);
-  }
-  
-  return cells;
-}
-
-/**
- * Ajoute une cellule si elle est valide
- */
-function addCellIfValid(
-  cells: Position[], 
-  row: number, 
-  col: number, 
-  gridSize: number, 
-  usedCells: Set<string>,
-  visited: Set<string>
-): boolean {
-  if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
-    const key = `${row}-${col}`;
-    if (!usedCells.has(key) && !visited.has(key)) {
-      cells.push({ row, col });
-      visited.add(key);
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Générateur de fallback simple
- */
-function generateSimpleFallback(gridSize: number, targetSize: number, usedCells: Set<string>): Position[] {
-  const cells: Position[] = [];
-  
-  for (let row = 0; row < gridSize && cells.length < targetSize; row++) {
-    for (let col = 0; col < gridSize && cells.length < targetSize; col++) {
-      const key = `${row}-${col}`;
-      if (!usedCells.has(key)) {
-        cells.push({ row, col });
-      }
-    }
-  }
-  
-  return cells;
+export function generateAdvancedRegions(gridSize: number): ColoredRegion[] {
+  return generateConnectedRegions(gridSize);
 }
 
 /**
@@ -291,33 +348,6 @@ export function solvePuzzle(regions: ColoredRegion[], gridSize: number): Positio
 }
 
 /**
- * Génère des régions colorées simples (fallback)
- */
-export function generateColoredRegions(gridSize: number): ColoredRegion[] {
-  console.log(`🎯 Generating fallback regions for ${gridSize}×${gridSize} grid`);
-  
-  const regions: ColoredRegion[] = [];
-  
-  // Chaque région est une rangée horizontale (solution simple qui marche toujours)
-  for (let row = 0; row < gridSize; row++) {
-    const region: ColoredRegion = {
-      id: row,
-      color: Colors.regions[row % Colors.regions.length],
-      cells: [],
-      hasQueen: false
-    };
-    
-    for (let col = 0; col < gridSize; col++) {
-      region.cells.push({ row, col });
-    }
-    
-    regions.push(region);
-  }
-  
-  return regions;
-}
-
-/**
  * Initialise un plateau vide avec les régions colorées
  */
 export function initializeBoard(gridSize: number, regions: ColoredRegion[]): GameCell[][] {
@@ -366,14 +396,14 @@ export function generateLevel(gridSize: number) {
   let attempts = 0;
   const maxAttempts = 10;
   
-  // Essayer de générer un puzzle avec des régions avancées
+  // Essayer de générer un puzzle avec des régions connexes
   while (attempts < maxAttempts && !solution) {
     attempts++;
     console.log(`🔄 Attempt ${attempts}/${maxAttempts}`);
     
     if (attempts <= 7) {
-      // Essayer des régions avancées
-      regions = generateAdvancedRegions(gridSize);
+      // Essayer des régions connexes
+      regions = generateConnectedRegions(gridSize);
     } else {
       // Fallback vers des régions simples
       console.log(`🔧 Using fallback simple regions`);
@@ -383,7 +413,7 @@ export function generateLevel(gridSize: number) {
     solution = solvePuzzle(regions, gridSize);
     
     if (solution) {
-      console.log(`🎉 Generated solvable puzzle in ${attempts} attempts!`);
+      console.log(`🎉 Generated solvable connected puzzle in ${attempts} attempts!`);
       break;
     }
   }
@@ -397,7 +427,7 @@ export function generateLevel(gridSize: number) {
   
   const board = initializeBoard(gridSize, regions);
   
-  // Stocker la solution pour référence (utile pour les hints futures)
+  // Stocker la solution pour référence
   const gameState = {
     board,
     regions,
@@ -406,10 +436,10 @@ export function generateLevel(gridSize: number) {
     queensRequired: gridSize,
     isCompleted: false,
     moveCount: 0,
-    solution: solution || [] // Ajouter la solution au game state
+    solution: solution || []
   };
   
-  console.log(`📊 Level generated: ${regions.length} regions, solvable: ${solution ? 'YES' : 'NO'}`);
+  console.log(`📊 Level generated: ${regions.length} connected regions, solvable: ${solution ? 'YES' : 'NO'}`);
   
   return gameState;
 }
