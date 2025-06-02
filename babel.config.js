@@ -3,7 +3,8 @@ module.exports = function(api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      'react-native-reanimated/plugin',
+      // Note: react-native-reanimated/plugin removed for compatibility
+      // Will be re-added when reanimated is properly configured
     ],
   };
 };
