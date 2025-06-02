@@ -25,7 +25,7 @@ const GameCell: React.FC<GameCellProps> = ({
       case 'queen':
         return <Text style={styles.queenText}>👑</Text>;
       case 'marker':
-        return <Text style={styles.markerText}>✕</Text>;
+        return <Text style={styles.markerText}>❌</Text>;
       default:
         return null;
     }
@@ -56,7 +56,7 @@ const GameCell: React.FC<GameCellProps> = ({
 
 const styles = StyleSheet.create({
   cell: {
-    borderWidth: 2, // Augmenté de 1 à 2 pour plus de visibilité
+    borderWidth: 0.5, // Augmenté de 1 à 2 pour plus de visibilité
     justifyContent: 'center',
     alignItems: 'center',
     margin: 0,

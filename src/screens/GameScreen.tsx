@@ -52,7 +52,7 @@ const GameScreen: React.FC = () => {
           hasHint={hasHintAvailable}
         />
 
-        {/* Debug Info (temporaire) */}
+        {/* Debug Info (temporaire)
         {__DEV__ && gameState.solution && (
           <View style={styles.debugContainer}>
             <Text style={styles.debugTitle}>🔍 Debug - Solution:</Text>
@@ -60,7 +60,7 @@ const GameScreen: React.FC = () => {
               {gameState.solution.map(pos => `(${pos.row},${pos.col})`).join(' | ')}
             </Text>
           </View>
-        )}
+        )} */}
       </ScrollView>
     </SafeAreaView>
   );
