@@ -56,10 +56,9 @@ const GameCell: React.FC<GameCellProps> = ({
 
 const styles = StyleSheet.create({
   cell: {
-    borderWidth: 1,
+    borderWidth: 2, // Augmenté de 1 à 2 pour plus de visibilité
     justifyContent: 'center',
     alignItems: 'center',
-    // Retirer margin pour éviter les problèmes de disposition
     margin: 0,
   },
   cellContent: {
@@ -68,7 +67,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   queenText: {
-    fontSize: 18, // Légèrement réduit pour s'adapter mieux
+    fontSize: 18, 
     textAlign: 'center',
   },
   markerText: {
@@ -79,6 +78,7 @@ const styles = StyleSheet.create({
   },
   highlighted: {
     backgroundColor: Colors.highlight,
+    borderWidth: 3, // Bordure encore plus épaisse pour le highlight
   },
   conflict: {
     backgroundColor: Colors.conflict,
