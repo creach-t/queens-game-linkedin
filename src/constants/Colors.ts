@@ -17,31 +17,31 @@ export const Colors = {
   conflict: '#FF4444',
   success: '#4CAF50',
   
-  // Region Colors (distinct and accessible)
+  // Region Colors - PLUS CONTRASTÉES et distinctes
   regions: [
     '#E3F2FD', // Light Blue
-    '#F3E5F5', // Light Purple
+    '#F8E6FF', // Light Purple  
     '#E8F5E8', // Light Green
-    '#FFF3E0', // Light Orange
-    '#FCE4EC', // Light Pink
-    '#F1F8E9', // Light Lime
-    '#E0F2F1', // Light Teal
-    '#FFF8E1', // Light Yellow
-    '#EFEBE9', // Light Brown
-    '#ECEFF1', // Light Blue Grey
+    '#FFF0E0', // Light Orange
+    '#FFE4EC', // Light Pink
+    '#F0F8E0', // Light Lime
+    '#E0F8F8', // Light Cyan
+    '#FFF8E0', // Light Yellow
+    '#F0E8E0', // Light Brown
+    '#F0F0F8', // Light Lavender
   ],
   
-  // Region Borders (darker versions)
+  // Region Borders - BEAUCOUP PLUS FONCÉS pour meilleure visibilité
   regionBorders: [
-    '#1976D2', // Blue
-    '#7B1FA2', // Purple
-    '#388E3C', // Green
-    '#F57C00', // Orange
-    '#C2185B', // Pink
-    '#689F38', // Lime
-    '#00796B', // Teal
-    '#FBC02D', // Yellow
-    '#5D4037', // Brown
-    '#455A64', // Blue Grey
+    '#0D47A1', // Dark Blue
+    '#4A148C', // Dark Purple
+    '#1B5E20', // Dark Green
+    '#E65100', // Dark Orange
+    '#AD1457', // Dark Pink
+    '#33691E', // Dark Lime
+    '#006064', // Dark Cyan
+    '#F57F17', // Dark Yellow
+    '#3E2723', // Dark Brown
+    '#311B92', // Dark Indigo
   ],
 };
