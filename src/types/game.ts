@@ -24,6 +24,7 @@ export interface GameState {
   queensRequired: number;
   isCompleted: boolean;
   moveCount: number;
+  solution?: {row: number, col: number}[]; // Solution pour les hints
 }
 
 export interface GameMove {
