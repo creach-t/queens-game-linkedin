@@ -5,19 +5,23 @@ import { Colors } from '../constants/Colors';
 interface GameControlsProps {
   onReset: () => void;
   onNewGame: () => void;
+  onHint: () => void;
   queensPlaced: number;
   queensRequired: number;
   moveCount: number;
   isCompleted: boolean;
+  hasHint: boolean;
 }
 
 const GameControls: React.FC<GameControlsProps> = ({
   onReset,
   onNewGame,
+  onHint,
   queensPlaced,
   queensRequired,
   moveCount,
-  isCompleted
+  isCompleted,
+  hasHint
 }) => {
   return (
     <View style={styles.container}>
@@ -45,6 +49,17 @@ const GameControls: React.FC<GameControlsProps> = ({
         <TouchableOpacity style={styles.button} onPress={onReset}>
           <Text style={styles.buttonText}>🔄 Reset</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.button, hasHint ? styles.hintButton : styles.disabledButton]} 
+          onPress={hasHint ? onHint : undefined}
+          disabled={!hasHint || isCompleted}
+        >
+          <Text style={[styles.buttonText, hasHint ? styles.hintButtonText : styles.disabledButtonText]}>
+            💡 Indice
+          </Text>
+        </TouchableOpacity>
+        
         <TouchableOpacity 
           style={[styles.button, styles.primaryButton]} 
           onPress={onNewGame}
@@ -59,6 +74,7 @@ const GameControls: React.FC<GameControlsProps> = ({
         <Text style={styles.instructionText}>• Double-tap: reine 👑</Text>
         <Text style={styles.instructionText}>• Une reine par rangée, colonne et région colorée</Text>
         <Text style={styles.instructionText}>• Les reines ne peuvent pas se toucher</Text>
+        <Text style={styles.instructionText}>• Indice: révèle une position de reine valide</Text>
       </View>
     </View>
   );
@@ -110,22 +126,36 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardBackground,
     borderRadius: 8,
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: Colors.linkedinBlue,
-    flex: 0.45,
+    flex: 0.3,
   },
   primaryButton: {
     backgroundColor: Colors.linkedinBlue,
   },
+  hintButton: {
+    backgroundColor: '#FFA500', // Orange pour les hints
+    borderColor: '#FF8C00',
+  },
+  disabledButton: {
+    backgroundColor: '#F0F0F0',
+    borderColor: '#CCCCCC',
+  },
   buttonText: {
     textAlign: 'center',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: Colors.linkedinBlue,
   },
   primaryButtonText: {
     color: 'white',
+  },
+  hintButtonText: {
+    color: 'white',
+  },
+  disabledButtonText: {
+    color: '#999999',
   },
   instructionsContainer: {
     backgroundColor: Colors.cardBackground,
@@ -133,7 +163,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   instructionText: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
     marginBottom: 3,
   },
