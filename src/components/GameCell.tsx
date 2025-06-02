@@ -56,10 +56,11 @@ const GameCell: React.FC<GameCellProps> = ({
 
 const styles = StyleSheet.create({
   cell: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 0.5,
+    // Retirer margin pour éviter les problèmes de disposition
+    margin: 0,
   },
   cellContent: {
     flex: 1,
@@ -67,11 +68,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   queenText: {
-    fontSize: 20,
+    fontSize: 18, // Légèrement réduit pour s'adapter mieux
     textAlign: 'center',
   },
   markerText: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.marker,
     fontWeight: 'bold',
     textAlign: 'center',
